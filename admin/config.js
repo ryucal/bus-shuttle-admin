@@ -1,17 +1,17 @@
 // Supabase 설정
-// 환경변수 또는 기본값 사용
+// 브라우저 환경에서 직접 설정
 
 const SUPABASE_CONFIG = {
     // 개발 환경
     development: {
-        url: process.env.SUPABASE_URL || 'https://eafxirecbggrejokbdic.supabase.co',
-        anonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhZnhpcmVjYmdncmVqb2tiZGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1ODU3ODEsImV4cCI6MjA2OTE2MTc4MX0.qvgm2z-Sgo8nc_botxCzICepeMRtbAOva2byzPlMJWw'
+        url: 'https://eafxirecbggrejokbdic.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhZnhpcmVjYmdncmVqb2tiZGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1ODU3ODEsImV4cCI6MjA2OTE2MTc4MX0.qvgm2z-Sgo8nc_botxCzICepeMRtbAOva2byzPlMJWw'
     },
     
     // 프로덕션 환경
     production: {
-        url: process.env.SUPABASE_URL || 'https://eafxirecbggrejokbdic.supabase.co',
-        anonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhZnhpcmVjYmdncmVqb2tiZGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1ODU3ODEsImV4cCI6MjA2OTE2MTc4MX0.qvgm2z-Sgo8nc_botxCzICepeMRtbAOva2byzPlMJWw'
+        url: 'https://eafxirecbggrejokbdic.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhZnhpcmVjYmdncmVqb2tiZGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1ODU3ODEsImV4cCI6MjA2OTE2MTc4MX0.qvgm2z-Sgo8nc_botxCzICepeMRtbAOva2byzPlMJWw'
     }
 };
 
