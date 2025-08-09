@@ -247,38 +247,64 @@ function isSameDate(date1, date2) {
 
 // 초기화
 document.addEventListener('DOMContentLoaded', async () => {
-    // 페이지 로드 시 즉시 오늘 날짜로 설정 (한국 시간대 기준)
-    const today = getTodayDate();
-    selectedDate = today;
+    console.log('🚀 관리자 페이지 초기화 시작...');
     
-    console.log('페이지 로드 - 오늘 날짜 설정:', today);
-    console.log('selectedDate 초기값:', selectedDate);
-    console.log('현재 시간 (한국):', new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }));
-    console.log('현재 시간 (UTC):', new Date().toISOString());
+    // 로딩 화면 강제 숨김 타임아웃 설정 (10초 후)
+    const loadingTimeout = setTimeout(() => {
+        console.log('⚠️ 로딩 타임아웃 - 강제로 로딩 화면을 숨깁니다');
+        hideLoadingScreen();
+        showLoginScreen();
+    }, 10000);
     
-    // 캐시 무효화를 위한 강제 새로고침 체크
-    if (performance.navigation.type === 1) {
-        console.log('페이지가 새로고침되었습니다.');
-    }
-    
-    // DOM 요소가 로드된 후 날짜 입력 필드 설정
-    setTimeout(() => {
-        if (selectedDateInput) {
-            selectedDateInput.value = today;
-            selectedDateInput.setAttribute('value', today);
-            console.log('DOM 로드 후 selectedDateInput 설정:', selectedDateInput.value);
+    try {
+        // 페이지 로드 시 즉시 오늘 날짜로 설정 (한국 시간대 기준)
+        const today = getTodayDate();
+        selectedDate = today;
+        
+        console.log('페이지 로드 - 오늘 날짜 설정:', today);
+        console.log('selectedDate 초기값:', selectedDate);
+        console.log('현재 시간 (한국):', new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }));
+        console.log('현재 시간 (UTC):', new Date().toISOString());
+        
+        // 캐시 무효화를 위한 강제 새로고침 체크
+        if (performance.navigation.type === 1) {
+            console.log('페이지가 새로고침되었습니다.');
         }
-    }, 100);
-    
-    await initializeApp();
+        
+        // DOM 요소가 로드된 후 날짜 입력 필드 설정
+        setTimeout(() => {
+            if (selectedDateInput) {
+                selectedDateInput.value = today;
+                selectedDateInput.setAttribute('value', today);
+                console.log('DOM 로드 후 selectedDateInput 설정:', selectedDateInput.value);
+            }
+        }, 100);
+        
+        await initializeApp();
+        clearTimeout(loadingTimeout); // 성공시 타임아웃 해제
+        
+        // 피크타임 모달 이벤트 리스너 등록
+        setupPeakTimeModalEvents();
+        
+    } catch (error) {
+        console.error('❌ 초기화 중 오류 발생:', error);
+        clearTimeout(loadingTimeout);
+        hideLoadingScreen();
+        showLoginScreen();
+    }
 });
 
 async function initializeApp() {
+    console.log('📱 initializeApp 함수 시작...');
+    
     try {
         // Supabase 클라이언트 확인
+        console.log('🔧 Supabase 클라이언트 확인 중...');
         if (!supabase) {
+            console.error('❌ Supabase 클라이언트가 초기화되지 않았습니다.');
             throw new Error('Supabase 클라이언트가 초기화되지 않았습니다.');
         }
+        console.log('✅ Supabase 클라이언트 확인 완료');
 
         // 현재 시간 표시
         updateCurrentTime();
@@ -720,6 +746,13 @@ function updateTimeDistributionChart() {
             }
         }
     });
+    
+    // 피크 타임 순위 업데이트 (비동기 처리)
+    setTimeout(() => {
+        calculateAndDisplayPeakTimes().catch(error => {
+            console.error('피크 타임 업데이트 실패:', error);
+        });
+    }, 100);
 }
 
 function calculateTimeDistribution() {
@@ -984,6 +1017,102 @@ function matchCommuteOffWorkPairs(reports, shuttleType, targetDate) {
     return pairs;
 }
 
+// 출발지별 배경색 매핑 (Flutter 앱과 동일)
+function getDepartureBackgroundColor(departure) {
+    switch (departure) {
+        // 근로자 셔틀 출발지 (파란색 계열과 초록색 계열)
+        case '독성리':
+            return '#E3F2FD'; // blue.shade50
+        case '가좌리':
+            return '#E8F5E8'; // green.shade50
+        case '원삼면사무소':
+            return '#E8EAF6'; // indigo.shade50
+        case '서측공동구':
+            return '#E0F2F1'; // teal.shade50
+        case '전진식당':
+            return '#E0F7FA'; // cyan.shade50
+        case '양지(외부)':
+            return '#E1F5FE'; // lightBlue.shade50
+        case '백암(외부)':
+            return '#F1F8E9'; // lightGreen.shade50
+        case '천리(외부)':
+            return '#ECEFF1'; // blueGrey.shade50
+        case '원삼건강검진':
+            return '#EDE7F6'; // deepPurple.shade50
+
+        // 직원 셔틀 출발지 (따뜻한 색상 계열)
+        case '원삼':
+            return '#FFF3E0'; // orange.shade50
+        case '안성':
+            return '#FCE4EC'; // pink.shade50
+        case '용인':
+            return '#F3E5F5'; // purple.shade50
+        case '죽능리':
+            return '#FFF8E1'; // amber.shade50
+        case '덕성리':
+            return '#EFEBE9'; // brown.shade50
+        case '백암박곡리':
+            return '#FBE9E7'; // deepOrange.shade50
+        case '경남아너스빌':
+            return '#FFEBEE'; // red.shade50
+
+        // 기본값 (흰색)
+        default:
+            return '#FFFFFF';
+    }
+}
+
+// 출발지별 테두리 색상 매핑 (Flutter 앱과 동일)
+function getDepartureBorderColor(departure) {
+    switch (departure) {
+        // 근로자 셔틀 출발지
+        case '독성리':
+            return '#90CAF9'; // blue.shade200
+        case '가좌리':
+            return '#A5D6A7'; // green.shade200
+        case '원삼면사무소':
+            return '#9FA8DA'; // indigo.shade200
+        case '서측공동구':
+            return '#80CBC4'; // teal.shade200
+        case '전진식당':
+            return '#80DEEA'; // cyan.shade200
+        case '양지(외부)':
+            return '#81D4FA'; // lightBlue.shade200
+        case '백암(외부)':
+            return '#C5E1A5'; // lightGreen.shade200
+        case '천리(외부)':
+            return '#B0BEC5'; // blueGrey.shade200
+        case '원삼건강검진':
+            return '#B39DDB'; // deepPurple.shade200
+
+        // 직원 셔틀 출발지
+        case '원삼':
+            return '#FFCC80'; // orange.shade200
+        case '안성':
+            return '#F8BBD9'; // pink.shade200
+        case '용인':
+            return '#CE93D8'; // purple.shade200
+        case '죽능리':
+            return '#FFF176'; // amber.shade200
+        case '덕성리':
+            return '#BCAAA4'; // brown.shade200
+        case '백암박곡리':
+            return '#FFAB91'; // deepOrange.shade200
+        case '경남아너스빌':
+            return '#EF9A9A'; // red.shade200
+
+        // 기본값
+        default:
+            return '#E0E0E0'; // grey.shade300
+    }
+}
+
+// 출발지별 텍스트 색상 (가독성 확보)
+function getDepartureTextColor(departure) {
+    // 모든 배경색이 연한 색상(shade50)이므로 어두운 텍스트 사용
+    return '#212121'; // 진한 회색
+}
+
 function createReportElement(report) {
     // 시간 파싱 - departure_time이 있으면 그것을 사용, 없으면 created_at 사용
     let reportTime;
@@ -1108,38 +1237,54 @@ function createReportElement(report) {
     const directionColor = report.direction === '출근' ? 'text-blue-600' : 'text-green-600';
 
     const reportDiv = document.createElement('div');
-    reportDiv.className = `border rounded-lg p-4 mb-3 fade-in ${isSimpleReport ? 'simple-report' : 'bg-white'}`;
+    reportDiv.className = `border rounded-lg p-4 mb-3 fade-in departure-card`;
     
-    // 단순 인원보고인 경우 인라인 스타일로 주황색 적용
+    // 출발지별 배경색 적용 (Flutter 앱과 동일)
+    const departure = report.departure || '';
+    const departureBackgroundColor = getDepartureBackgroundColor(departure);
+    const departureBorderColor = getDepartureBorderColor(departure);
+    const departureTextColor = getDepartureTextColor(departure);
+    
+    // 단순 인원보고인 경우 우선순위로 주황색 적용, 아니면 출발지별 색상 적용
     if (isSimpleReport) {
         reportDiv.style.backgroundColor = '#fff7ed';
         reportDiv.style.borderLeft = '4px solid #f97316';
         reportDiv.style.borderColor = '#f97316';
+        reportDiv.style.color = '#9a3412'; // 단순보고 텍스트 색상
+    } else {
+        reportDiv.style.backgroundColor = departureBackgroundColor;
+        reportDiv.style.borderLeft = `4px solid ${departureBorderColor}`;
+        reportDiv.style.borderColor = departureBorderColor;
+        reportDiv.style.color = departureTextColor;
     }
+    // 텍스트 색상 결정 (단순보고일 때와 일반 보고일 때 구분)
+    const mainTextColor = isSimpleReport ? '#9a3412' : departureTextColor;
+    const subTextColor = isSimpleReport ? '#c2410c' : '#6b7280';
+    
     reportDiv.innerHTML = `
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span class="text-sm font-semibold text-gray-700">
+                    <span class="text-sm font-semibold" style="color: ${mainTextColor};">
                         ${report.driver_name ? report.driver_name.charAt(0) : '?'}
                     </span>
                 </div>
                 <div>
                     <div class="flex items-center space-x-2">
-                        <span class="font-semibold text-gray-900">${report.driver_name || '알 수 없음'}</span>
+                        <span class="font-semibold" style="color: ${mainTextColor};">${report.driver_name || '알 수 없음'}</span>
                         <span class="text-xs px-2 py-1 rounded-full ${directionColor} bg-opacity-10 ${directionColor.replace('text-', 'bg-')}">
                             ${report.direction}
                         </span>
                         ${isSimpleReport ? '<span class="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-600">단순보고</span>' : ''}
                     </div>
-                    <div class="text-sm text-gray-600">
+                    <div class="text-sm" style="color: ${subTextColor};">
                         ${directionEmoji} ${report.departure} / ${report.passenger_count}명
                         ${report.shuttle_type ? `/ ${report.shuttle_type}` : ''}
                     </div>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <span class="text-xs text-gray-500">${timeString}</span>
+                <span class="text-xs" style="color: ${subTextColor};">${timeString}</span>
                 <button onclick="editReport('${report.id}')" class="text-blue-500 hover:text-blue-700">
                     <i class="fas fa-edit"></i>
                 </button>
@@ -3410,4 +3555,726 @@ async function exportAffiliationReport() {
         console.error('소속별 보고서 내보내기 실패:', error);
         showNotification('보고서 내보내기에 실패했습니다.', 'error');
     }
+}
+
+// 5일치 피크 타임 계산 및 표시
+async function calculateAndDisplayPeakTimes() {
+    console.log('🕐 피크 타임 계산 시작...');
+    
+    // 피크타임 카드 요소 확인
+    const peakTimeCard = document.getElementById('peakTimeDisplay');
+    if (!peakTimeCard) {
+        console.error('❌ peakTimeDisplay 요소를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 로딩 상태 표시 (카드용)
+    const peakTimeHour = document.getElementById('peakTimeHour');
+    const peakTimeCount = document.getElementById('peakTimeCount');
+    
+    if (peakTimeHour) peakTimeHour.textContent = '계산중...';
+    if (peakTimeCount) peakTimeCount.textContent = '로딩중';
+    
+    try {
+        const peakTimes = await calculate5DayAveragePeakTimes();
+        console.log('📊 피크 타임 계산 결과:', peakTimes);
+        updatePeakTimeCard(peakTimes);
+        console.log('✅ 피크타임 카드 업데이트 완료');
+    } catch (error) {
+        console.error('❌ 피크 타임 계산 실패:', error);
+        if (peakTimeHour) peakTimeHour.textContent = '--:--';
+        if (peakTimeCount) peakTimeCount.textContent = '오류 발생';
+    }
+}
+
+// 5일치 평균 피크 타임 계산
+async function calculate5DayAveragePeakTimes() {
+    console.log('📅 selectedDate:', selectedDate);
+    const today = new Date(selectedDate);
+    const dates = [];
+    
+    // 오늘 포함 5일치 날짜 생성
+    for (let i = 4; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    console.log('📅 피크 타임 계산 대상 날짜들:', dates);
+    
+    // 각 날짜별 데이터 수집
+    const allTimeData = {};
+    
+    for (const date of dates) {
+        try {
+            console.log(`🔍 ${date} 데이터 조회 시작...`);
+            const { data: dayReports, error } = await supabase
+                .from('shuttle_reports')
+                .select('*')
+                .gte('created_at', `${date}T00:00:00`)
+                .lt('created_at', `${date}T23:59:59`);
+                
+            if (error) {
+                console.error(`❌ ${date} 데이터 조회 실패:`, error);
+                continue;
+            }
+            
+            console.log(`📊 ${date} 데이터 조회 결과: ${dayReports?.length || 0}개`);
+            
+            // 시간대별 데이터 계산
+            const timeSlots = {};
+            for (let hour = 0; hour < 24; hour++) {
+                const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                timeSlots[timeSlot] = 0;
+            }
+            
+            dayReports.forEach(report => {
+                const reportTime = new Date(report.created_at);
+                const hour = reportTime.getHours();
+                const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                timeSlots[timeSlot] += report.passenger_count || 0;
+            });
+            
+            // 전체 데이터에 누적
+            Object.keys(timeSlots).forEach(timeSlot => {
+                if (!allTimeData[timeSlot]) {
+                    allTimeData[timeSlot] = [];
+                }
+                allTimeData[timeSlot].push(timeSlots[timeSlot]);
+            });
+            
+        } catch (error) {
+            console.error(`${date} 데이터 처리 실패:`, error);
+        }
+    }
+    
+    // 5일 평균 계산
+    const averageData = {};
+    Object.keys(allTimeData).forEach(timeSlot => {
+        const values = allTimeData[timeSlot];
+        const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+        averageData[timeSlot] = average;
+    });
+    
+    // 상위 3개 시간대 찾기
+    const sortedTimes = Object.entries(averageData)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([time, count], index) => ({
+            rank: index + 1,
+            time: time,
+            count: Math.round(count * 10) / 10, // 소수점 1자리로 반올림
+            percentage: 0 // 백분율은 나중에 계산
+        }));
+    
+    // 백분율 계산
+    const totalCount = Object.values(averageData).reduce((a, b) => a + b, 0);
+    if (totalCount > 0) {
+        sortedTimes.forEach(item => {
+            item.percentage = Math.round((item.count / totalCount) * 100 * 10) / 10;
+        });
+    }
+    
+    return sortedTimes;
+}
+
+// displayPeakTimeRanking 함수 제거됨 - updatePeakTimeCard 직접 사용
+
+// 피크타임 통계카드 업데이트
+function updatePeakTimeCard(peakTimes) {
+    const peakTimeHour = document.getElementById('peakTimeHour');
+    const peakTimeCount = document.getElementById('peakTimeCount');
+    
+    if (!peakTimeHour || !peakTimeCount) {
+        console.error('❌ 피크타임 카드 요소를 찾을 수 없습니다.');
+        return;
+    }
+    
+    if (!peakTimes || peakTimes.length === 0) {
+        console.log('📊 피크 타임 데이터가 없음');
+        peakTimeHour.textContent = '--:--';
+        peakTimeCount.textContent = '데이터 없음';
+        return;
+    }
+    
+    // 1위 데이터 표시
+    const topPeak = peakTimes[0];
+    peakTimeHour.innerHTML = `👑 ${topPeak.time}`;
+    peakTimeCount.textContent = `평균 ${topPeak.count}명 (${topPeak.percentage}%)`;
+    
+    console.log('✅ 피크타임 카드 업데이트 완료:', topPeak);
+}
+
+// ===== 피크타임 모달 관련 함수들 =====
+
+// 피크타임 모달 열기
+function openPeakTimeModal() {
+    console.log('🕐 피크타임 모달 열기');
+    const modal = document.getElementById('peakTimeModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        // 모달이 열리면 상세 데이터 로드
+        loadPeakTimeModalData();
+    }
+}
+
+// 피크타임 모달 닫기
+function closePeakTimeModal() {
+    console.log('🕐 피크타임 모달 닫기');
+    const modal = document.getElementById('peakTimeModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// 피크타임 모달 데이터 로드
+async function loadPeakTimeModalData() {
+    console.log('📊 피크타임 모달 데이터 로드 시작');
+    
+    try {
+        // Top 5 피크타임 데이터 가져오기
+        const peakTimes = await calculate5DayAveragePeakTimes();
+        
+        // Top 5 순위표 업데이트
+        updatePeakTimeRankingList(peakTimes.slice(0, 5));
+        
+        // 일별 변화 차트 업데이트
+        await updatePeakTimeTrendChart();
+        
+        // 시간대별 히트맵 업데이트
+        updatePeakTimeHeatmap(peakTimes);
+        
+        // 통계 요약 업데이트
+        updatePeakTimeStatistics(peakTimes);
+        
+        console.log('✅ 피크타임 모달 데이터 로드 완료');
+    } catch (error) {
+        console.error('❌ 피크타임 모달 데이터 로드 실패:', error);
+        showErrorInModal();
+    }
+}
+
+// Top 5 순위표 업데이트
+function updatePeakTimeRankingList(peakTimes) {
+    const container = document.getElementById('peakTimeRankingList');
+    if (!container || !peakTimes || peakTimes.length === 0) {
+        if (container) {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500">데이터가 없습니다.</div>';
+        }
+        return;
+    }
+    
+    const rankingHTML = peakTimes.map((peak, index) => {
+        const rankEmoji = ['👑', '🥈', '🥉', '4️⃣', '5️⃣'][index];
+        const bgColor = index === 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200';
+        
+        return `
+            <div class="${bgColor} border rounded-lg p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-2xl">${rankEmoji}</div>
+                    <div>
+                        <div class="text-lg font-bold text-gray-900">${peak.time}</div>
+                        <div class="text-sm text-gray-500">${index + 1}위</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-bold text-purple-600">${peak.count}명</div>
+                    <div class="text-sm text-gray-500">${peak.percentage}%</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = rankingHTML;
+    console.log('📊 Top 5 순위표 업데이트 완료');
+}
+
+// 일별 피크타임 변화 차트 업데이트
+let peakTimeTrendChart = null; // 차트 인스턴스 저장용
+
+async function updatePeakTimeTrendChart() {
+    console.log('📈 일별 피크타임 변화 차트 업데이트 시작');
+    
+    const canvas = document.getElementById('peakTimeTrendChart');
+    if (!canvas) {
+        console.error('❌ 피크타임 트렌드 차트 캔버스를 찾을 수 없습니다');
+        return;
+    }
+    
+    try {
+        // 기존 차트가 있다면 제거
+        if (peakTimeTrendChart) {
+            peakTimeTrendChart.destroy();
+        }
+        
+        // 5일간 일별 피크타임 데이터 수집
+        const dailyPeakData = await getDailyPeakTimeData();
+        console.log('📊 일별 피크타임 데이터:', dailyPeakData);
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Chart.js 라인 차트 생성
+        peakTimeTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dailyPeakData.labels, // ['8/5', '8/6', '8/7', '8/8', '8/9']
+                datasets: [{
+                    label: '피크타임',
+                    data: dailyPeakData.peakHours, // [14, 14, 15, 14, 14]
+                    borderColor: 'rgb(147, 51, 234)', // 보라색
+                    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgb(147, 51, 234)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }, {
+                    label: '승객 수',
+                    data: dailyPeakData.peakCounts, // [52, 58, 48, 62, 61]
+                    borderColor: 'rgb(59, 130, 246)', // 파란색
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: false
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    return `피크타임: ${context.parsed.y}:00`;
+                                } else {
+                                    return `승객 수: ${context.parsed.y}명`;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: '날짜'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '시간 (시)'
+                        },
+                        min: 0,
+                        max: 23,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ':00';
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '승객 수 (명)'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+        
+        console.log('✅ 일별 피크타임 변화 차트 생성 완료');
+        
+    } catch (error) {
+        console.error('❌ 피크타임 변화 차트 생성 실패:', error);
+        
+        // 오류 시 메시지 표시
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#EF4444';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('차트 데이터를 불러올 수 없습니다', canvas.width / 2, canvas.height / 2);
+    }
+}
+
+// 5일간 일별 피크타임 데이터 수집
+async function getDailyPeakTimeData() {
+    console.log('📅 일별 피크타임 데이터 수집 시작');
+    
+    const today = new Date(selectedDate);
+    const labels = [];
+    const peakHours = [];
+    const peakCounts = [];
+    
+    // 5일간 날짜 생성
+    for (let i = 4; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        // 라벨용 간단한 날짜 형식 (8/5)
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        labels.push(`${month}/${day}`);
+        
+        try {
+            console.log(`🔍 ${dateString} 일별 데이터 조회...`);
+            
+            // 해당 날짜의 데이터 조회
+            const { data: dayReports, error } = await supabase
+                .from('shuttle_reports')
+                .select('*')
+                .gte('created_at', `${dateString}T00:00:00`)
+                .lt('created_at', `${dateString}T23:59:59`);
+                
+            if (error) {
+                console.error(`❌ ${dateString} 데이터 조회 실패:`, error);
+                peakHours.push(null);
+                peakCounts.push(0);
+                continue;
+            }
+            
+            console.log(`📊 ${dateString} 데이터: ${dayReports?.length || 0}개`);
+            
+            if (!dayReports || dayReports.length === 0) {
+                peakHours.push(null);
+                peakCounts.push(0);
+                continue;
+            }
+            
+            // 시간대별 승객 수 계산
+            const timeSlots = {};
+            for (let hour = 0; hour < 24; hour++) {
+                timeSlots[hour] = 0;
+            }
+            
+            dayReports.forEach(report => {
+                const reportTime = new Date(report.created_at);
+                const hour = reportTime.getHours();
+                // 기존과 동일한 필드 사용
+                timeSlots[hour] += report.passenger_count || 0;
+            });
+            
+            // 가장 높은 승객 수를 가진 시간대 찾기
+            let maxCount = 0;
+            let peakHour = 0;
+            
+            Object.entries(timeSlots).forEach(([hour, count]) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    peakHour = parseInt(hour);
+                }
+            });
+            
+            peakHours.push(peakHour);
+            peakCounts.push(maxCount);
+            
+            console.log(`✅ ${dateString} 피크타임: ${peakHour}:00 (${maxCount}명)`);
+            
+        } catch (error) {
+            console.error(`❌ ${dateString} 처리 중 오류:`, error);
+            peakHours.push(null);
+            peakCounts.push(0);
+        }
+    }
+    
+    console.log('📈 일별 피크타임 데이터 수집 완료:', { labels, peakHours, peakCounts });
+    
+    return {
+        labels,
+        peakHours,
+        peakCounts
+    };
+}
+
+// 시간대별 히트맵 업데이트 (실제 데이터 기반)
+async function updatePeakTimeHeatmap(peakTimes) {
+    console.log('🔥 정교한 시간대별 히트맵 업데이트 시작');
+    const container = document.getElementById('peakTimeHeatmap');
+    if (!container) return;
+    
+    try {
+        // 5일간 시간대별 평균 승객 데이터 계산
+        const hourlyData = await calculateHourlyAverageData();
+        console.log('📊 시간대별 평균 데이터:', hourlyData);
+        
+        // 최대값 찾기 (색상 강도 계산용)
+        const maxCount = Math.max(...Object.values(hourlyData));
+        console.log('📈 최대 승객 수:', maxCount);
+        
+        // 24시간 히트맵 생성
+        container.className = 'grid grid-cols-6 gap-2'; // 6x4 그리드로 변경
+        
+        let heatmapHTML = '';
+        for (let hour = 0; hour < 24; hour++) {
+            const count = hourlyData[hour] || 0;
+            const intensity = maxCount > 0 ? count / maxCount : 0;
+            
+            // 색상 계산 (보라색 그라디언트)
+            const { bgColor, textColor } = getHeatmapColors(intensity);
+            
+            // 시간 표시 (12시간 형식도 함께)
+            const hour24 = hour.toString().padStart(2, '0');
+            const hour12 = hour === 0 ? '12AM' : hour <= 12 ? `${hour}${hour === 12 ? 'PM' : 'AM'}` : `${hour-12}PM`;
+            
+            heatmapHTML += `
+                <div class="heatmap-cell h-16 rounded-lg flex flex-col items-center justify-center text-xs font-medium transition-transform hover:scale-105 cursor-pointer border border-gray-200" 
+                     style="background-color: ${bgColor}; color: ${textColor};"
+                     data-hour="${hour}"
+                     data-count="${count}"
+                     title="${hour24}:00 - 평균 ${count.toFixed(1)}명">
+                    <div class="font-bold">${hour24}:00</div>
+                    <div class="text-[10px] opacity-75">${count.toFixed(1)}명</div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = heatmapHTML;
+        
+        // 툴팁 이벤트 추가
+        addHeatmapTooltips();
+        
+        console.log('✅ 정교한 히트맵 생성 완료');
+        
+    } catch (error) {
+        console.error('❌ 히트맵 생성 실패:', error);
+        container.innerHTML = `
+            <div class="col-span-6 text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                <div>히트맵 데이터를 불러올 수 없습니다</div>
+            </div>
+        `;
+    }
+}
+
+// 5일간 시간대별 평균 승객 데이터 계산
+async function calculateHourlyAverageData() {
+    console.log('⏰ 시간대별 평균 데이터 계산 시작');
+    
+    const today = new Date(selectedDate);
+    const hourlyTotals = {}; // {0: [day1Count, day2Count, ...], 1: [...], ...}
+    
+    // 24시간 초기화
+    for (let hour = 0; hour < 24; hour++) {
+        hourlyTotals[hour] = [];
+    }
+    
+    // 5일간 데이터 수집
+    for (let i = 4; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        try {
+            console.log(`🔍 ${dateString} 시간대별 데이터 조회...`);
+            
+            const { data: dayReports, error } = await supabase
+                .from('shuttle_reports')
+                .select('*')
+                .gte('created_at', `${dateString}T00:00:00`)
+                .lt('created_at', `${dateString}T23:59:59`);
+                
+            if (error || !dayReports) {
+                console.error(`❌ ${dateString} 데이터 조회 실패:`, error);
+                // 데이터가 없는 경우 0으로 채우기
+                for (let hour = 0; hour < 24; hour++) {
+                    hourlyTotals[hour].push(0);
+                }
+                continue;
+            }
+            
+            // 해당 날짜의 시간대별 승객 수 계산
+            const dayHourlyData = {};
+            for (let hour = 0; hour < 24; hour++) {
+                dayHourlyData[hour] = 0;
+            }
+            
+            dayReports.forEach(report => {
+                const reportTime = new Date(report.created_at);
+                const hour = reportTime.getHours();
+                // 기존과 동일한 필드 사용
+                dayHourlyData[hour] += report.passenger_count || 0;
+            });
+            
+            // 시간대별 데이터를 배열에 추가
+            for (let hour = 0; hour < 24; hour++) {
+                hourlyTotals[hour].push(dayHourlyData[hour]);
+            }
+            
+            console.log(`✅ ${dateString} 시간대별 데이터 수집 완료`);
+            
+        } catch (error) {
+            console.error(`❌ ${dateString} 처리 중 오류:`, error);
+            // 오류 발생시 0으로 채우기
+            for (let hour = 0; hour < 24; hour++) {
+                hourlyTotals[hour].push(0);
+            }
+        }
+    }
+    
+    // 5일 평균 계산
+    const hourlyAverages = {};
+    for (let hour = 0; hour < 24; hour++) {
+        const values = hourlyTotals[hour];
+        const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+        hourlyAverages[hour] = average;
+    }
+    
+    console.log('📊 시간대별 5일 평균 계산 완료:', hourlyAverages);
+    return hourlyAverages;
+}
+
+// 히트맵 색상 계산
+function getHeatmapColors(intensity) {
+    // intensity: 0.0 ~ 1.0
+    
+    if (intensity === 0) {
+        return {
+            bgColor: '#F3F4F6', // 회색
+            textColor: '#6B7280'
+        };
+    }
+    
+    // 보라색 그라디언트 (연한 보라 → 진한 보라)
+    const minR = 196, minG = 181, minB = 253; // #C4B5FD (보라 100)
+    const maxR = 88, maxG = 28, maxB = 135;   // #581C87 (보라 900)
+    
+    const r = Math.round(minR + (maxR - minR) * intensity);
+    const g = Math.round(minG + (maxG - minG) * intensity);
+    const b = Math.round(minB + (maxB - minB) * intensity);
+    
+    const bgColor = `rgb(${r}, ${g}, ${b})`;
+    const textColor = intensity > 0.5 ? '#FFFFFF' : '#374151';
+    
+    return { bgColor, textColor };
+}
+
+// 히트맵 툴팁 이벤트 추가
+function addHeatmapTooltips() {
+    const cells = document.querySelectorAll('.heatmap-cell');
+    
+    cells.forEach(cell => {
+        cell.addEventListener('mouseenter', function() {
+            const hour = this.dataset.hour;
+            const count = parseFloat(this.dataset.count);
+            
+            // 간단한 툴팁 효과 (타이틀 속성 이미 설정됨)
+            this.style.transform = 'scale(1.1)';
+            this.style.zIndex = '10';
+            this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        });
+        
+        cell.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+            this.style.zIndex = '';
+            this.style.boxShadow = '';
+        });
+        
+        // 클릭 이벤트 (향후 상세 정보 표시용)
+        cell.addEventListener('click', function() {
+            const hour = this.dataset.hour;
+            const count = parseFloat(this.dataset.count);
+            console.log(`🕐 ${hour}:00 시간대 클릭 - 평균 ${count.toFixed(1)}명`);
+        });
+    });
+    
+    console.log('🎯 히트맵 툴팁 이벤트 추가 완료');
+}
+
+// 통계 요약 업데이트 (임시 구현)
+function updatePeakTimeStatistics(peakTimes) {
+    console.log('📊 피크타임 통계 요약 업데이트');
+    
+    // 일관성 계산 (임시)
+    document.getElementById('peakConsistency').textContent = '80%';
+    
+    // 평균 지속시간 (임시)
+    document.getElementById('peakDuration').textContent = '45분';
+    
+    // 전주 대비 증감률 (임시)
+    document.getElementById('peakGrowth').textContent = '+12%';
+}
+
+// 모달 에러 표시
+function showErrorInModal() {
+    const container = document.getElementById('peakTimeRankingList');
+    if (container) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                <div>데이터를 불러올 수 없습니다.</div>
+            </div>
+        `;
+    }
+}
+
+// 피크타임 모달 이벤트 리스너 설정
+function setupPeakTimeModalEvents() {
+    console.log('🎯 피크타임 모달 이벤트 리스너 설정');
+    
+    // 피크타임 카드 클릭 이벤트
+    const peakTimeCard = document.getElementById('peakTimeCard');
+    if (peakTimeCard) {
+        peakTimeCard.addEventListener('click', openPeakTimeModal);
+        console.log('✅ 피크타임 카드 클릭 이벤트 등록 완료');
+    }
+    
+    // 모달 닫기 버튼들 (X 버튼)
+    const closeButton = document.getElementById('closePeakTimeModal');
+    if (closeButton) {
+        closeButton.addEventListener('click', closePeakTimeModal);
+    }
+    
+    // 모달 닫기 버튼 (하단)
+    const closeModalBtn = document.getElementById('closePeakTimeModalBtn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closePeakTimeModal);
+    }
+    
+    // 모달 배경 클릭시 닫기
+    const modal = document.getElementById('peakTimeModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closePeakTimeModal();
+            }
+        });
+    }
+    
+    console.log('🎯 피크타임 모달 이벤트 설정 완료');
 } 
